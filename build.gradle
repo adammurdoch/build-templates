@@ -1,0 +1,83 @@
+import freemarker.template.Configuration
+import freemarker.template.Template
+import freemarker.cache.StringTemplateLoader
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'org.freemarker:freemarker:2.3.23'
+    }
+}
+
+plugins {
+    id 'base'
+}
+
+class BuildModel {
+    ProjectModel rootProject = new ProjectModel()
+    List<ProjectModel> subprojects = []
+}
+
+class ProjectModel {
+    String name
+}
+
+class AppModel extends ProjectModel {
+    boolean isLibrary() { false }
+}
+
+class LibraryModel extends ProjectModel {
+    boolean isLibrary() { true }
+}
+
+class TemplateTask extends DefaultTask {
+    @OutputDirectory
+    File outputDir
+
+    @InputFile
+    File settingsTemplate
+    
+    @InputFile
+    File rootProjectTemplate
+    
+    @InputFile
+    File projectTemplate
+    
+    @TaskAction
+    def generate() {
+        def configuration = new Configuration(Configuration.VERSION_2_3_23)
+        def loader = new StringTemplateLoader()
+        def build = new BuildModel()
+        build.rootProject.name = 'TestApp'
+        build.subprojects.add(new AppModel(name: 'app'))
+        build.subprojects.add(new LibraryModel(name: 'lib1'))
+        build.subprojects.add(new LibraryModel(name: 'lib2'))
+        configuration.templateLoader = loader
+        loader.putTemplate("root-build.gradle", rootProjectTemplate.text)
+        loader.putTemplate("project-build.gradle", projectTemplate.text)
+        loader.putTemplate("settings.gradle", settingsTemplate.text)
+        generateFile(configuration, [build: build], "settings.gradle", "settings.gradle", outputDir)
+        generateFile(configuration, [project: build.rootProject], "root-build.gradle", "build.gradle", outputDir)
+        build.subprojects.each { p ->
+            generateFile(configuration, [project: p], "project-build.gradle", "${p.name}/build.gradle", outputDir)
+        }
+    }
+    
+    def generateFile(Configuration configuration, Object root, String templateName, String outputFileName, File outputDir) {
+        def template = configuration.getTemplate(templateName)
+        def outputFile = new File(outputDir, outputFileName)
+        outputFile.parentFile.mkdirs()
+        outputFile.withWriter { w -> 
+            template.process(root, w)
+        }
+    }
+}
+
+task testApp(type: TemplateTask) {
+    outputDir = file("$buildDir/testApp")
+    rootProjectTemplate = file("testApp/root/build.gradle")
+    settingsTemplate = file("testApp/root/settings.gradle")
+    projectTemplate = file("testApp/project/build.gradle")
+}
