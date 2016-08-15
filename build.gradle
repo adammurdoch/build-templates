@@ -1,6 +1,5 @@
-import freemarker.template.Configuration
-import freemarker.template.Template
 import freemarker.cache.StringTemplateLoader
+import freemarker.template.Configuration
 
 buildscript {
     repositories {
@@ -13,6 +12,10 @@ buildscript {
 
 plugins {
     id 'base'
+}
+
+class Repo {
+    URI uri
 }
 
 class BuildModel {
@@ -36,35 +39,17 @@ class TemplateTask extends DefaultTask {
     @OutputDirectory
     File outputDir
 
-    @InputFile
-    File settingsTemplate
-    
-    @InputFile
-    File rootProjectTemplate
-    
-    @InputFile
-    File projectTemplate
-    
     @TaskAction
     def generate() {
         def configuration = new Configuration(Configuration.VERSION_2_3_23)
         def loader = new StringTemplateLoader()
-        def build = new BuildModel()
-        build.rootProject.name = 'TestApp'
-        build.subprojects.add(new AppModel(name: 'app'))
-        build.subprojects.add(new LibraryModel(name: 'lib1'))
-        build.subprojects.add(new LibraryModel(name: 'lib2'))
         configuration.templateLoader = loader
-        loader.putTemplate("root-build.gradle", rootProjectTemplate.text)
-        loader.putTemplate("project-build.gradle", projectTemplate.text)
-        loader.putTemplate("settings.gradle", settingsTemplate.text)
-        generateFile(configuration, [build: build], "settings.gradle", "settings.gradle", outputDir)
-        generateFile(configuration, [project: build.rootProject], "root-build.gradle", "build.gradle", outputDir)
-        build.subprojects.each { p ->
-            generateFile(configuration, [project: p], "project-build.gradle", "${p.name}/build.gradle", outputDir)
-        }
+        generate(configuration, loader)
     }
-    
+
+    def generate(Configuration configuration, StringTemplateLoader loader) {
+    }
+
     def generateFile(Configuration configuration, Object root, String templateName, String outputFileName, File outputDir) {
         def template = configuration.getTemplate(templateName)
         def outputFile = new File(outputDir, outputFileName)
@@ -75,7 +60,116 @@ class TemplateTask extends DefaultTask {
     }
 }
 
-task testApp(type: TemplateTask) {
+class GradleBuildTask extends TemplateTask {
+    @InputFile
+    File settingsTemplate
+
+    @InputFile
+    File rootProjectTemplate
+
+    @InputFile
+    File projectTemplate
+
+    @Override
+    def generate(Configuration configuration, StringTemplateLoader loader) {
+        def build = new BuildModel()
+        build.rootProject.name = 'TestApp'
+        build.subprojects.add(new AppModel(name: 'app'))
+        build.subprojects.add(new LibraryModel(name: 'lib1'))
+        build.subprojects.add(new LibraryModel(name: 'lib2'))
+        loader.putTemplate("root-build.gradle", rootProjectTemplate.text)
+        loader.putTemplate("project-build.gradle", projectTemplate.text)
+        loader.putTemplate("settings.gradle", settingsTemplate.text)
+        generateFile(configuration, [build: build], "settings.gradle", "settings.gradle", outputDir)
+        generateFile(configuration, [project: build.rootProject], "root-build.gradle", "build.gradle", outputDir)
+        build.subprojects.each { p ->
+            generateFile(configuration, [project: p], "project-build.gradle", "${p.name}/build.gradle", outputDir)
+        }
+    }
+}
+
+class MavenCoords {
+    String group = "test"
+    String name
+    String version = "1.0"
+}
+
+class ModuleModel extends MavenCoords {
+    List<MavenDependency> dependencies = []
+}
+
+class MavenDependency extends MavenCoords {
+    String scope
+}
+
+class MavenRepoTask extends TemplateTask {
+    @InputFile File pomTemplate
+
+    @Override
+    def generate(Configuration configuration, StringTemplateLoader loader) {
+        loader.putTemplate("pom.xml", pomTemplate.text)
+        generateTree(configuration, 'test1')
+        generateTree(configuration, 'test2')
+        generateTree(configuration, 'test3')
+        generateTree(configuration, 'test4')
+        generateTree(configuration, 'test5')
+    }
+
+    def generateTree(Configuration configuration, String name) {
+        def main = new ModuleModel(name: name)
+        main.dependencies << new MavenDependency(name: "${name}-1")
+        main.dependencies << new MavenDependency(name: "${name}-2", scope: 'compile')
+        main.dependencies << new MavenDependency(name: "${name}-3", scope: 'runtime')
+        main.dependencies << new MavenDependency(name: "${name}-4", scope: 'provided')
+        main.dependencies << new MavenDependency(name: "${name}-5", scope: 'test')
+        generatePom(configuration, main)
+        generatePom(configuration, new ModuleModel(name: "${name}-1"))
+        generatePom(configuration, new ModuleModel(name: "${name}-2"))
+        generatePom(configuration, new ModuleModel(name: "${name}-3"))
+        generatePom(configuration, new ModuleModel(name: "${name}-4"))
+        generatePom(configuration, new ModuleModel(name: "${name}-5"))
+    }
+
+    def generatePom(Configuration configuration, ModuleModel module) {
+        def pomPath = "${module.group}/${module.name}/${module.version}/${module.name}-${module.version}.pom"
+        def jarPath = "${module.group}/${module.name}/${module.version}/${module.name}-${module.version}.jar"
+
+        generateFile(configuration, [module: module], "pom.xml", pomPath, outputDir)
+
+        def jarFile = new File(outputDir, jarPath)
+        jarFile.parentFile.mkdirs()
+        jarFile.createNewFile()
+    }
+}
+
+class MavenBuildTask extends TemplateTask {
+    @InputFile File pomTemplate
+
+    @Override
+    def generate(Configuration configuration, StringTemplateLoader loader) {
+        loader.putTemplate("pom.xml", pomTemplate.text)
+        def module = new ModuleModel(name: 'main')
+        module.dependencies << new MavenDependency(name: 'test1')
+        module.dependencies << new MavenDependency(name: 'test2', scope: 'compile')
+        module.dependencies << new MavenDependency(name: 'test3', scope: 'runtime')
+        module.dependencies << new MavenDependency(name: 'test4', scope: 'provided')
+        module.dependencies << new MavenDependency(name: 'test5', scope: 'test')
+        generateFile(configuration, [module: module, repo: new Repo(uri: project.file("build/mavenRepo").toURI())], "pom.xml", "pom.xml", outputDir)
+    }
+}
+
+task mavenRepo(type: MavenRepoTask) {
+    outputDir = file("$buildDir/mavenRepo")
+    pomTemplate = file("templates/maven/published.xml")
+}
+
+task mavenBuild(type: MavenBuildTask) {
+    dependsOn mavenRepo
+    outputDir = file("$buildDir/maven")
+    pomTemplate = file("templates/maven/build.xml")
+}
+
+task testApp(type: GradleBuildTask) {
     outputDir = file("$buildDir/testApp")
     rootProjectTemplate = file("testApp/root/build.gradle")
     settingsTemplate = file("testApp/root/settings.gradle")
