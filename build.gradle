@@ -160,18 +160,18 @@ class MavenBuildTask extends TemplateTask {
 
 task mavenRepo(type: MavenRepoTask) {
     outputDir = file("$buildDir/mavenRepo")
-    pomTemplate = file("templates/maven/published.xml.ftl")
+    pomTemplate = file("templates/maven/repo/pom.xml.ftl")
 }
 
 task mavenBuild(type: MavenBuildTask) {
     dependsOn mavenRepo
     outputDir = file("$buildDir/maven")
-    pomTemplate = file("templates/maven/build.xml.ftl")
+    pomTemplate = file("templates/maven/build/pom.xml.ftl")
 }
 
 task testApp(type: GradleBuildTask) {
-    outputDir = file("$buildDir/testApp")
-    rootProjectTemplate = file("testApp/root/build.gradle.ftl")
-    settingsTemplate = file("testApp/root/settings.gradle.ftl")
-    projectTemplate = file("testApp/project/build.gradle.ftl")
+    outputDir = file("$buildDir/android")
+    settingsTemplate = file("templates/common/settings.gradle.ftl")
+    rootProjectTemplate = file("templates/android/build.gradle.ftl")
+    projectTemplate = file("templates/android/project/build.gradle.ftl")
 }
