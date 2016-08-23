@@ -26,21 +26,53 @@ class BuildModel {
 class ProjectModel {
     String name
 
+}
+
+abstract class SourceProjectModel extends ProjectModel {
     String getBasePackage() {
         return "org.test." + name.toLowerCase()
     }
+
+    abstract boolean isLibrary()
+
+    abstract SourceFileModel getEntryPoint()
+
+    List<SourceFileModel> getProductionClasses() {
+        return [
+            entryPoint,
+            new SourceFileModel(project: this, name: 'Util1'),
+            new SourceFileModel(project: this, name: 'Util2'),
+            new SourceFileModel(project: this, name: 'Util3')
+        ]
+    }
+
+    List<SourceFileModel> getTestClasses() {
+        return [
+            new SourceFileModel(project: this, name: "UnitTest", referencedClass: entryPoint)
+        ]
+    }
 }
 
-class AppModel extends ProjectModel {
+class AppModel extends SourceProjectModel {
     boolean isLibrary() { false }
+
+    @Override
+    SourceFileModel getEntryPoint() {
+        return new SourceFileModel(project: this, name: "AppMain")
+    }
 }
 
-class LibraryModel extends ProjectModel {
+class LibraryModel extends SourceProjectModel {
     boolean isLibrary() { true }
+
+    @Override
+    SourceFileModel getEntryPoint() {
+        return new SourceFileModel(project: this, name: "Lib")
+    }
 }
 
 class SourceFileModel {
-    ProjectModel project
+    SourceProjectModel project
     String name
     SourceFileModel referencedClass
 
@@ -111,10 +143,12 @@ class GradleBuildTask extends TemplateTask {
         generateFile(configuration, [project: build.rootProject], "root-build.gradle", "build.gradle", outputDir)
         build.subprojects.each { p ->
             generateFile(configuration, [project: p], "project-build.gradle", "${p.name}/build.gradle", outputDir)
-            def source = new SourceFileModel(project: p, name: 'Library', referencedClass: null)
-            def test = new SourceFileModel(project: p, name: 'LibraryTest', referencedClass: source)
-            generateFile(configuration, [project: p, class: source], "source.java", "${p.name}/src/main/java/${source.sourceFileName}", outputDir)
-            generateFile(configuration, [project: p, class: test], "test.java", "${p.name}/src/test/java/${test.sourceFileName}", outputDir)
+            for (def c : p.productionClasses) {
+                generateFile(configuration, [project: p, class: c], "source.java", "${p.name}/src/main/java/${c.sourceFileName}", outputDir)
+            }
+            for (def c : p.testClasses) {
+                generateFile(configuration, [project: p, class: c], "test.java", "${p.name}/src/test/java/${c.sourceFileName}", outputDir)
+            }
         }
     }
 }
