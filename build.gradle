@@ -25,6 +25,10 @@ class BuildModel {
 
 class ProjectModel {
     String name
+
+    String getBasePackage() {
+        return "org.test." + name.toLowerCase()
+    }
 }
 
 class AppModel extends ProjectModel {
@@ -70,20 +74,27 @@ class GradleBuildTask extends TemplateTask {
     @InputFile
     File projectTemplate
 
+    @InputFile
+    File sourceTemplate
+
+    @InputFile
+    File testSourceTemplate
+
+    BuildModel build
+
     @Override
     def generate(Configuration configuration, StringTemplateLoader loader) {
-        def build = new BuildModel()
-        build.rootProject.name = 'TestApp'
-        build.subprojects.add(new AppModel(name: 'app'))
-        build.subprojects.add(new LibraryModel(name: 'lib1'))
-        build.subprojects.add(new LibraryModel(name: 'lib2'))
         loader.putTemplate("root-build.gradle", rootProjectTemplate.text)
         loader.putTemplate("project-build.gradle", projectTemplate.text)
         loader.putTemplate("settings.gradle", settingsTemplate.text)
+        loader.putTemplate("source.java", sourceTemplate.text)
+        loader.putTemplate("test.java", testSourceTemplate.text)
         generateFile(configuration, [build: build], "settings.gradle", "settings.gradle", outputDir)
         generateFile(configuration, [project: build.rootProject], "root-build.gradle", "build.gradle", outputDir)
         build.subprojects.each { p ->
             generateFile(configuration, [project: p], "project-build.gradle", "${p.name}/build.gradle", outputDir)
+            generateFile(configuration, [project: p], "source.java", "${p.name}/src/main/java/Library.java", outputDir)
+            generateFile(configuration, [project: p], "test.java", "${p.name}/src/test/java/LibraryTest.java", outputDir)
         }
     }
 }
@@ -169,9 +180,34 @@ task mavenBuild(type: MavenBuildTask) {
     pomTemplate = file("templates/maven/build/pom.xml.ftl")
 }
 
-task testApp(type: GradleBuildTask) {
+task androidApp(type: GradleBuildTask) {
+    dependsOn mavenRepo
     outputDir = file("$buildDir/android")
     settingsTemplate = file("templates/common/settings.gradle.ftl")
     rootProjectTemplate = file("templates/android/build.gradle.ftl")
     projectTemplate = file("templates/android/project/build.gradle.ftl")
+    sourceTemplate = file("templates/java/project/library.java.ftl")
+    testSourceTemplate = file("templates/java/project/libraryTest.java.ftl")
+
+    build = new BuildModel()
+    build.rootProject.name = 'TestApp'
+    build.subprojects.add(new AppModel(name: 'app'))
+    build.subprojects.add(new LibraryModel(name: 'lib1'))
+    build.subprojects.add(new LibraryModel(name: 'lib2'))
+}
+
+task javaApp(type: GradleBuildTask) {
+    dependsOn mavenRepo
+    outputDir = file("$buildDir/java")
+    settingsTemplate = file("templates/common/settings.gradle.ftl")
+    rootProjectTemplate = file("templates/java/build.gradle.ftl")
+    projectTemplate = file("templates/java/project/build.gradle.ftl")
+    sourceTemplate = file("templates/java/project/library.java.ftl")
+    testSourceTemplate = file("templates/java/project/libraryTest.java.ftl")
+
+    build = new BuildModel()
+    build.rootProject.name = 'TestApp'
+    build.subprojects.add(new AppModel(name: 'app'))
+    build.subprojects.add(new LibraryModel(name: 'lib1'))
+    build.subprojects.add(new LibraryModel(name: 'lib2'))
 }
