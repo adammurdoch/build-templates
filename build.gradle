@@ -108,26 +108,26 @@ class MavenRepoTask extends TemplateTask {
     @Override
     def generate(Configuration configuration, StringTemplateLoader loader) {
         loader.putTemplate("pom.xml", pomTemplate.text)
-        generateTree(configuration, 'test1')
-        generateTree(configuration, 'test2')
-        generateTree(configuration, 'test3')
-        generateTree(configuration, 'test4')
-        generateTree(configuration, 'test5')
+        generateTree(configuration, 'test-compile')
+        generateTree(configuration, 'test-compile2')
+        generateTree(configuration, 'test-runtime')
+        generateTree(configuration, 'test-provided')
+        generateTree(configuration, 'test-test')
     }
 
     def generateTree(Configuration configuration, String name) {
         def main = new ModuleModel(name: name)
-        main.dependencies << new MavenDependency(name: "${name}-1")
-        main.dependencies << new MavenDependency(name: "${name}-2", scope: 'compile')
-        main.dependencies << new MavenDependency(name: "${name}-3", scope: 'runtime')
-        main.dependencies << new MavenDependency(name: "${name}-4", scope: 'provided')
-        main.dependencies << new MavenDependency(name: "${name}-5", scope: 'test')
+        main.dependencies << new MavenDependency(name: "${name}-compile")
+        main.dependencies << new MavenDependency(name: "${name}-compile2", scope: 'compile')
+        main.dependencies << new MavenDependency(name: "${name}-runtime", scope: 'runtime')
+        main.dependencies << new MavenDependency(name: "${name}-provided", scope: 'provided')
+        main.dependencies << new MavenDependency(name: "${name}-test", scope: 'test')
         generatePom(configuration, main)
-        generatePom(configuration, new ModuleModel(name: "${name}-1"))
-        generatePom(configuration, new ModuleModel(name: "${name}-2"))
-        generatePom(configuration, new ModuleModel(name: "${name}-3"))
-        generatePom(configuration, new ModuleModel(name: "${name}-4"))
-        generatePom(configuration, new ModuleModel(name: "${name}-5"))
+        generatePom(configuration, new ModuleModel(name: "${name}-compile"))
+        generatePom(configuration, new ModuleModel(name: "${name}-compile2"))
+        generatePom(configuration, new ModuleModel(name: "${name}-runtime"))
+        generatePom(configuration, new ModuleModel(name: "${name}-provided"))
+        generatePom(configuration, new ModuleModel(name: "${name}-test"))
     }
 
     def generatePom(Configuration configuration, ModuleModel module) {
@@ -149,11 +149,11 @@ class MavenBuildTask extends TemplateTask {
     def generate(Configuration configuration, StringTemplateLoader loader) {
         loader.putTemplate("pom.xml", pomTemplate.text)
         def module = new ModuleModel(name: 'main')
-        module.dependencies << new MavenDependency(name: 'test1')
-        module.dependencies << new MavenDependency(name: 'test2', scope: 'compile')
-        module.dependencies << new MavenDependency(name: 'test3', scope: 'runtime')
-        module.dependencies << new MavenDependency(name: 'test4', scope: 'provided')
-        module.dependencies << new MavenDependency(name: 'test5', scope: 'test')
+        module.dependencies << new MavenDependency(name: 'test-compile')
+        module.dependencies << new MavenDependency(name: 'test-compile2', scope: 'compile')
+        module.dependencies << new MavenDependency(name: 'test-runtime', scope: 'runtime')
+        module.dependencies << new MavenDependency(name: 'test-provided', scope: 'provided')
+        module.dependencies << new MavenDependency(name: 'test-test', scope: 'test')
         generateFile(configuration, [module: module, repo: new Repo(uri: project.file("build/mavenRepo").toURI())], "pom.xml", "pom.xml", outputDir)
     }
 }
