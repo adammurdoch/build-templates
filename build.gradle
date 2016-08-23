@@ -39,6 +39,24 @@ class LibraryModel extends ProjectModel {
     boolean isLibrary() { true }
 }
 
+class SourceFileModel {
+    ProjectModel project
+    String name
+    SourceFileModel referencedClass
+
+    String getPackage() {
+        return project.basePackage
+    }
+
+    String getQualifiedName() {
+        return "${project.basePackage}.${name}"
+    }
+
+    String getSourceFileName() {
+        return qualifiedName.replace('.', '/') + ".java"
+    }
+}
+
 class TemplateTask extends DefaultTask {
     @OutputDirectory
     File outputDir
@@ -93,8 +111,10 @@ class GradleBuildTask extends TemplateTask {
         generateFile(configuration, [project: build.rootProject], "root-build.gradle", "build.gradle", outputDir)
         build.subprojects.each { p ->
             generateFile(configuration, [project: p], "project-build.gradle", "${p.name}/build.gradle", outputDir)
-            generateFile(configuration, [project: p], "source.java", "${p.name}/src/main/java/Library.java", outputDir)
-            generateFile(configuration, [project: p], "test.java", "${p.name}/src/test/java/LibraryTest.java", outputDir)
+            def source = new SourceFileModel(project: p, name: 'Library', referencedClass: null)
+            def test = new SourceFileModel(project: p, name: 'LibraryTest', referencedClass: source)
+            generateFile(configuration, [project: p, class: source], "source.java", "${p.name}/src/main/java/${source.sourceFileName}", outputDir)
+            generateFile(configuration, [project: p, class: test], "test.java", "${p.name}/src/test/java/${test.sourceFileName}", outputDir)
         }
     }
 }

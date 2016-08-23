@@ -1,4 +1,4 @@
-package ${project.basePackage};
+package ${class.package};
 
-public class Library {
+public class ${class.name} {
 }

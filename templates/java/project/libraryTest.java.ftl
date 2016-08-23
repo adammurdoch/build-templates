@@ -1,9 +1,10 @@
-package ${project.basePackage};
+package ${class.package};
 
 import org.junit.Test;
 
-public class LibraryTest {
+public class ${class.name} {
     @Test
     public void verify() {
+        new ${class.referencedClass.qualifiedName}();
     }
 }
