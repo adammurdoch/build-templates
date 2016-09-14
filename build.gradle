@@ -28,53 +28,53 @@ class ProjectModel {
 
 }
 
-abstract class SourceProjectModel extends ProjectModel {
+abstract class JavaSourceProjectModel extends ProjectModel {
     String getBasePackage() {
         return "org.test." + name.toLowerCase()
     }
 
     abstract boolean isLibrary()
 
-    abstract SourceFileModel getEntryPoint()
+    abstract JavaSourceFileModel getEntryPoint()
 
-    List<SourceFileModel> getProductionClasses() {
+    List<JavaSourceFileModel> getProductionClasses() {
         return [
-            entryPoint,
-            new SourceFileModel(project: this, name: 'Util1'),
-            new SourceFileModel(project: this, name: 'Util2'),
-            new SourceFileModel(project: this, name: 'Util3')
+                entryPoint,
+                new JavaSourceFileModel(project: this, name: 'Util1'),
+                new JavaSourceFileModel(project: this, name: 'Util2'),
+                new JavaSourceFileModel(project: this, name: 'Util3')
         ]
     }
 
-    List<SourceFileModel> getTestClasses() {
+    List<JavaSourceFileModel> getTestClasses() {
         return [
-            new SourceFileModel(project: this, name: "UnitTest", referencedClass: entryPoint)
+            new JavaSourceFileModel(project: this, name: "UnitTest", referencedClass: entryPoint)
         ]
     }
 }
 
-class AppModel extends SourceProjectModel {
+class JavaAppModel extends JavaSourceProjectModel {
     boolean isLibrary() { false }
 
     @Override
-    SourceFileModel getEntryPoint() {
-        return new SourceFileModel(project: this, name: "AppMain")
+    JavaSourceFileModel getEntryPoint() {
+        return new JavaSourceFileModel(project: this, name: "AppMain")
     }
 }
 
-class LibraryModel extends SourceProjectModel {
+class JavaLibraryModel extends JavaSourceProjectModel {
     boolean isLibrary() { true }
 
     @Override
-    SourceFileModel getEntryPoint() {
-        return new SourceFileModel(project: this, name: "Lib")
+    JavaSourceFileModel getEntryPoint() {
+        return new JavaSourceFileModel(project: this, name: "Lib")
     }
 }
 
-class SourceFileModel {
-    SourceProjectModel project
+class JavaSourceFileModel {
+    JavaSourceProjectModel project
     String name
-    SourceFileModel referencedClass
+    JavaSourceFileModel referencedClass
 
     String getPackage() {
         return project.basePackage
@@ -162,11 +162,12 @@ class GradleJvmBuildTask extends GradleBuildTask {
 
     @Override
     void generateProjectFiles(Configuration configuration, ProjectModel p) {
-        for (def c : p.productionClasses) {
-            generateFile(configuration, [project: p, class: c], "source.java", "${p.name}/src/main/java/${c.sourceFileName}", outputDir)
+        JavaSourceProjectModel javaProject = p
+        for (def c : javaProject.productionClasses) {
+            generateFile(configuration, [project: javaProject, class: c], "source.java", "${javaProject.name}/src/main/java/${c.sourceFileName}", outputDir)
         }
-        for (def c : p.testClasses) {
-            generateFile(configuration, [project: p, class: c], "test.java", "${p.name}/src/test/java/${c.sourceFileName}", outputDir)
+        for (def c : javaProject.testClasses) {
+            generateFile(configuration, [project: javaProject, class: c], "test.java", "${javaProject.name}/src/test/java/${c.sourceFileName}", outputDir)
         }
     }
 }
@@ -286,9 +287,9 @@ task androidApp(type: GradleJvmBuildTask) {
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.subprojects.add(new AppModel(name: 'app'))
-    build.subprojects.add(new LibraryModel(name: 'lib1'))
-    build.subprojects.add(new LibraryModel(name: 'lib2'))
+    build.subprojects.add(new JavaAppModel(name: 'app'))
+    build.subprojects.add(new JavaLibraryModel(name: 'lib1'))
+    build.subprojects.add(new JavaLibraryModel(name: 'lib2'))
 }
 
 task javaApp(type: GradleJvmBuildTask) {
@@ -302,9 +303,9 @@ task javaApp(type: GradleJvmBuildTask) {
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.subprojects.add(new AppModel(name: 'app'))
-    build.subprojects.add(new LibraryModel(name: 'lib1'))
-    build.subprojects.add(new LibraryModel(name: 'lib2'))
+    build.subprojects.add(new JavaAppModel(name: 'app'))
+    build.subprojects.add(new JavaLibraryModel(name: 'lib1'))
+    build.subprojects.add(new JavaLibraryModel(name: 'lib2'))
 }
 
 task nativeApp(type: GradleNativeBuildTask) {
@@ -317,7 +318,7 @@ task nativeApp(type: GradleNativeBuildTask) {
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.subprojects.add(new AppModel(name: 'app'))
-    build.subprojects.add(new LibraryModel(name: 'lib1'))
-    build.subprojects.add(new LibraryModel(name: 'lib2'))
+    build.subprojects.add(new JavaAppModel(name: 'app'))
+    build.subprojects.add(new JavaLibraryModel(name: 'lib1'))
+    build.subprojects.add(new JavaLibraryModel(name: 'lib2'))
 }
