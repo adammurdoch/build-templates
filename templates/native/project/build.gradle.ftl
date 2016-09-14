@@ -5,7 +5,12 @@ plugins {
 
 model {
     components {
+<#if project.library>
         main(NativeLibrarySpec) {
         }
+<#else>
+        main(NativeExecutableSpec) {
+        }
+</#if>
     }
 }

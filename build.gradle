@@ -28,6 +28,24 @@ class ProjectModel {
 
 }
 
+abstract class CSourceProjectModel extends ProjectModel {
+    abstract boolean isLibrary()
+}
+
+class CLibraryModel extends CSourceProjectModel {
+    @Override
+    boolean isLibrary() {
+        return true
+    }
+}
+
+class CAppModel extends CSourceProjectModel {
+    @Override
+    boolean isLibrary() {
+        return false
+    }
+}
+
 abstract class JavaSourceProjectModel extends ProjectModel {
     String getBasePackage() {
         return "org.test." + name.toLowerCase()
@@ -177,20 +195,28 @@ class GradleNativeBuildTask extends GradleBuildTask {
     File sourceTemplate
 
     @InputFile
+    File appSourceTemplate
+
+    @InputFile
     File headerTemplate
 
     @Override
     void registerTemplates(StringTemplateLoader loader) {
+        loader.putTemplate("main.c", appSourceTemplate.text)
         loader.putTemplate("source.c", sourceTemplate.text)
         loader.putTemplate("source.h", headerTemplate.text)
     }
 
     @Override
     void generateProjectFiles(Configuration configuration, ProjectModel p) {
+        CSourceProjectModel cProject = p
         10.times { i ->
             def name = "library_$i"
-            generateFile(configuration, [project: p, name: name], "source.c", "${p.name}/src/main/c/${name}.c", outputDir)
-            generateFile(configuration, [project: p, name: name], "source.h", "${p.name}/src/main/headers/${name}.h", outputDir)
+            generateFile(configuration, [project: cProject, name: name], "source.c", "${cProject.name}/src/main/c/${name}.c", outputDir)
+            generateFile(configuration, [project: cProject, name: name], "source.h", "${cProject.name}/src/main/headers/${name}.h", outputDir)
+        }
+        if (!cProject.library) {
+            generateFile(configuration, [project: cProject, name: name], "main.c", "${cProject.name}/src/main/c/main.c", outputDir)
         }
     }
 }
@@ -315,10 +341,11 @@ task nativeApp(type: GradleNativeBuildTask) {
     projectTemplate = file("templates/native/project/build.gradle.ftl")
     headerTemplate = file("templates/native/project/library.h.ftl")
     sourceTemplate = file("templates/native/project/library.c.ftl")
+    appSourceTemplate = file("templates/native/project/main.c.ftl")
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.subprojects.add(new JavaAppModel(name: 'app'))
-    build.subprojects.add(new JavaLibraryModel(name: 'lib1'))
-    build.subprojects.add(new JavaLibraryModel(name: 'lib2'))
+    build.subprojects.add(new CAppModel(name: 'app'))
+    build.subprojects.add(new CLibraryModel(name: 'lib1'))
+    build.subprojects.add(new CLibraryModel(name: 'lib2'))
 }
