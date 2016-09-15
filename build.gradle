@@ -58,19 +58,29 @@ class ProjectModel {
 
 abstract class CSourceProjectModel extends ProjectModel {
     List<CLibraryModel> dependencies = []
+    int sourceCount = 10
+    int testCount = 5
 
     abstract boolean isLibrary()
 
     String getImplHeaderName() {
-        return "${name}_0.h"
+        return "${name}_1.h"
     }
 
     String getImplFunctionName() {
-        return "${name}_0"
+        return "${name}_1"
     }
 
     List<String> getImplHeaderNames() {
-        return (0..9).collect { "${name}_${it}.h" }
+        return (1..sourceCount).collect { "${name}_${it}.h" }
+    }
+
+    List<String> getImplSourceNames() {
+        return (1..sourceCount).collect { "${name}_${it}.c" }
+    }
+
+    List<String> getTestSourceNames() {
+        return (1..testCount).collect { "${name}_test_${it}.c" }
     }
 }
 
@@ -268,17 +278,17 @@ class GradleNativeBuildTask extends GradleBuildTask {
     @Override
     void generateProjectFiles(Configuration configuration, ProjectModel p) {
         CSourceProjectModel cProject = p
-        10.times { i ->
-            def name = "${p.name}_${i}"
-            generateFile(configuration, [project: cProject, name: name], "source.c", "${cProject.name}/src/main/c/${name}.c", outputDir)
+        cProject.implSourceNames.each { name ->
+            def baseName = name.replace(".c", "")
+            generateFile(configuration, [project: cProject, name: baseName], "source.c", "${cProject.name}/src/main/c/${name}", outputDir)
         }
         cProject.implHeaderNames.each { name ->
             def baseName = name.replace(".h", "")
             generateFile(configuration, [project: cProject, name: baseName], "source.h", "${cProject.name}/src/main/headers/${name}", outputDir)
         }
-        5.times { i ->
-            def name = "${p.name}_test_${i}"
-            generateFile(configuration, [project: cProject, name: name], "test.c", "${cProject.name}/src/test/c/${name}.c", outputDir)
+        cProject.testSourceNames.each { name ->
+            def baseName = name.replace(".c", "")
+            generateFile(configuration, [project: cProject, name: baseName], "test.c", "${cProject.name}/src/test/c/${name}", outputDir)
         }
         if (!cProject.library) {
             generateFile(configuration, [project: cProject, name: name], "main.c", "${cProject.name}/src/main/c/main.c", outputDir)
