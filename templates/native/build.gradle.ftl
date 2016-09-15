@@ -1,3 +1,5 @@
+ext.message = "configuring"
+
 subprojects {
     model {
         buildTypes {
@@ -7,13 +9,13 @@ subprojects {
         }
         components {
             withType(NativeComponentSpec) { c ->
-                println "configuring $c"
+                println "$message $c"
                 targetBuildTypes 'debug', 'release', 'profile'
             }
         }
         binaries {
             withType(NativeBinarySpec) { b ->
-                println "configuring $b"
+                println "$message $b"
                 cCompiler.define('BIN_NAME', '"' + b.displayName + '"')
             }
         }
