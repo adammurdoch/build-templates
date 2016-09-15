@@ -54,7 +54,6 @@ class CBuildModel extends BuildModel {
 
 class ProjectModel {
     String name
-
 }
 
 abstract class CSourceProjectModel extends ProjectModel {
@@ -68,6 +67,10 @@ abstract class CSourceProjectModel extends ProjectModel {
 
     String getImplFunctionName() {
         return "${name}_0"
+    }
+
+    List<String> getImplHeaderNames() {
+        return (0..9).collect { "${name}_${it}.h" }
     }
 }
 
@@ -268,7 +271,10 @@ class GradleNativeBuildTask extends GradleBuildTask {
         10.times { i ->
             def name = "${p.name}_${i}"
             generateFile(configuration, [project: cProject, name: name], "source.c", "${cProject.name}/src/main/c/${name}.c", outputDir)
-            generateFile(configuration, [project: cProject, name: name], "source.h", "${cProject.name}/src/main/headers/${name}.h", outputDir)
+        }
+        cProject.implHeaderNames.each { name ->
+            def baseName = name.replace(".h", "")
+            generateFile(configuration, [project: cProject, name: baseName], "source.h", "${cProject.name}/src/main/headers/${name}", outputDir)
         }
         5.times { i ->
             def name = "${p.name}_test_${i}"
