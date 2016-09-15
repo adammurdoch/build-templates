@@ -248,12 +248,16 @@ class GradleNativeBuildTask extends GradleBuildTask {
     File appSourceTemplate
 
     @InputFile
+    File testSourceTemplate
+
+    @InputFile
     File headerTemplate
 
     @Override
     void registerTemplates(StringTemplateLoader loader) {
         loader.putTemplate("main.c", appSourceTemplate.text)
         loader.putTemplate("source.c", sourceTemplate.text)
+        loader.putTemplate("test.c", testSourceTemplate.text)
         loader.putTemplate("source.h", headerTemplate.text)
         loader.putTemplate("library.h", libraryHeaderTemplate.text)
     }
@@ -266,10 +270,15 @@ class GradleNativeBuildTask extends GradleBuildTask {
             generateFile(configuration, [project: cProject, name: name], "source.c", "${cProject.name}/src/main/c/${name}.c", outputDir)
             generateFile(configuration, [project: cProject, name: name], "source.h", "${cProject.name}/src/main/headers/${name}.h", outputDir)
         }
+        5.times { i ->
+            def name = "${p.name}_test_${i}"
+            generateFile(configuration, [project: cProject, name: name], "test.c", "${cProject.name}/src/test/c/${name}.c", outputDir)
+        }
         if (!cProject.library) {
             generateFile(configuration, [project: cProject, name: name], "main.c", "${cProject.name}/src/main/c/main.c", outputDir)
         } else {
             generateFile(configuration, [project: cProject, name: name], "library.h", "${cProject.name}/src/main/headers/${cProject.publicHeaderName}", outputDir)
+            generateFile(configuration, [project: cProject, name: name], "main.c", "${cProject.name}/src/test/c/main.c", outputDir)
         }
     }
 }
@@ -396,6 +405,7 @@ task nativeApp(type: GradleNativeBuildTask) {
     libraryHeaderTemplate = file("templates/native/project/library-public.h.ftl")
     sourceTemplate = file("templates/native/project/library.c.ftl")
     appSourceTemplate = file("templates/native/project/main.c.ftl")
+    testSourceTemplate = file("templates/native/project/test.c.ftl")
 
     build = new CBuildModel()
     build.rootProject.name = 'TestApp'
