@@ -4,7 +4,6 @@
 <#list project.dependencies as dep>
 #include "${dep.publicHeaderName}"
 </#list>
-
-void ${name}();
+#include "${project.implHeaderName}"
 
 #endif
