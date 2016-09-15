@@ -58,7 +58,7 @@ class ProjectModel {
 }
 
 abstract class CSourceProjectModel extends ProjectModel {
-    List<CSourceProjectModel> dependencies = []
+    List<CLibraryModel> dependencies = []
 
     abstract boolean isLibrary()
 }
@@ -67,6 +67,14 @@ class CLibraryModel extends CSourceProjectModel {
     @Override
     boolean isLibrary() {
         return true
+    }
+
+    String getEntryHeaderName() {
+        return "${name}_0.h"
+    }
+
+    String getEntryFunctionName() {
+        return "${name}_0"
     }
 }
 
@@ -242,7 +250,7 @@ class GradleNativeBuildTask extends GradleBuildTask {
     void generateProjectFiles(Configuration configuration, ProjectModel p) {
         CSourceProjectModel cProject = p
         10.times { i ->
-            def name = "library_$i"
+            def name = "${p.name}_${i}"
             generateFile(configuration, [project: cProject, name: name], "source.c", "${cProject.name}/src/main/c/${name}.c", outputDir)
             generateFile(configuration, [project: cProject, name: name], "source.h", "${cProject.name}/src/main/headers/${name}.h", outputDir)
         }

@@ -2,5 +2,5 @@
 #include "${name}.h"
 
 void ${name}() {
-    // some thing
+    printf("hello from ${name} in %s\n", BIN_NAME);
 }

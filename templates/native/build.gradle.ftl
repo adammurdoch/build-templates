@@ -1,8 +1,9 @@
 subprojects {
     model {
         binaries {
-            all {
-                println "configuring $it"
+            withType(NativeBinarySpec) { b ->
+                println "configuring $b"
+                cCompiler.define('BIN_NAME', '"' + b.displayName + '"')
             }
         }
     }
