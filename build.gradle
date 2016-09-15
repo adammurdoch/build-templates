@@ -61,6 +61,14 @@ abstract class CSourceProjectModel extends ProjectModel {
     List<CLibraryModel> dependencies = []
 
     abstract boolean isLibrary()
+
+    String getImplHeaderName() {
+        return "${name}_0.h"
+    }
+
+    String getImplFunctionName() {
+        return "${name}_0"
+    }
 }
 
 class CLibraryModel extends CSourceProjectModel {
@@ -69,12 +77,12 @@ class CLibraryModel extends CSourceProjectModel {
         return true
     }
 
-    String getEntryHeaderName() {
-        return "${name}_0.h"
+    String getPublicHeaderName() {
+        return implHeaderName
     }
 
-    String getEntryFunctionName() {
-        return "${name}_0"
+    String getPublicFunctionName() {
+        return implFunctionName
     }
 }
 

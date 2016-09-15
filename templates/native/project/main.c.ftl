@@ -1,12 +1,8 @@
 #include <stdio.h>
-<#list project.dependencies as dep>
-#include "${dep.entryHeaderName}"
-</#list>
+#include "${project.implHeaderName}"
 
 int main() {
     printf("hello from %s\n", BIN_NAME);
-<#list project.dependencies as dep>
-    ${dep.entryFunctionName}();
-</#list>
+    ${project.implFunctionName}();
     return 0;
 }
