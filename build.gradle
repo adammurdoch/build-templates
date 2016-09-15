@@ -20,7 +20,36 @@ class Repo {
 
 class BuildModel {
     ProjectModel rootProject = new ProjectModel()
-    List<ProjectModel> subprojects = []
+    private Map<String, ProjectModel> subprojects = [:]
+
+    Collection<ProjectModel> getSubprojects() {
+        return subprojects.values()
+    }
+
+    void addSubproject(ProjectModel project) {
+        subprojects[project.name] = project
+    }
+
+    ProjectModel getProject(String name) {
+        return subprojects[name]
+    }
+}
+
+class CBuildModel extends BuildModel {
+    void addLibrary(Map<String, String> args) {
+        addSubproject(new CLibraryModel(name: args.name), args.dependsOn)
+    }
+
+    void addApp(Map<String, String> args) {
+        addSubproject(new CAppModel(name: args.name), args.dependsOn)
+    }
+
+    private void addSubproject(CSourceProjectModel project, List<String> dependsOn) {
+        addSubproject(project)
+        for (String dep : dependsOn ?: []) {
+            project.dependencies.add(getProject(dep))
+        }
+    }
 }
 
 class ProjectModel {
@@ -29,6 +58,8 @@ class ProjectModel {
 }
 
 abstract class CSourceProjectModel extends ProjectModel {
+    List<CSourceProjectModel> dependencies = []
+
     abstract boolean isLibrary()
 }
 
@@ -313,9 +344,9 @@ task androidApp(type: GradleJvmBuildTask) {
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.subprojects.add(new JavaAppModel(name: 'app'))
-    build.subprojects.add(new JavaLibraryModel(name: 'lib1'))
-    build.subprojects.add(new JavaLibraryModel(name: 'lib2'))
+    build.addSubproject(new JavaAppModel(name: 'app'))
+    build.addSubproject(new JavaLibraryModel(name: 'lib1'))
+    build.addSubproject(new JavaLibraryModel(name: 'lib2'))
 }
 
 task javaApp(type: GradleJvmBuildTask) {
@@ -329,9 +360,9 @@ task javaApp(type: GradleJvmBuildTask) {
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.subprojects.add(new JavaAppModel(name: 'app'))
-    build.subprojects.add(new JavaLibraryModel(name: 'lib1'))
-    build.subprojects.add(new JavaLibraryModel(name: 'lib2'))
+    build.addSubproject(new JavaAppModel(name: 'app'))
+    build.addSubproject(new JavaLibraryModel(name: 'lib1'))
+    build.addSubproject(new JavaLibraryModel(name: 'lib2'))
 }
 
 task nativeApp(type: GradleNativeBuildTask) {
@@ -343,9 +374,10 @@ task nativeApp(type: GradleNativeBuildTask) {
     sourceTemplate = file("templates/native/project/library.c.ftl")
     appSourceTemplate = file("templates/native/project/main.c.ftl")
 
-    build = new BuildModel()
+    build = new CBuildModel()
     build.rootProject.name = 'TestApp'
-    build.subprojects.add(new CAppModel(name: 'app'))
-    build.subprojects.add(new CLibraryModel(name: 'lib1'))
-    build.subprojects.add(new CLibraryModel(name: 'lib2'))
+    build.addLibrary(name: 'lib1')
+    build.addLibrary(name: 'lib2', dependsOn: ['lib1'])
+    build.addApp(name: 'app1', dependsOn: ['lib1', 'lib2'])
+    build.addApp(name: 'app2', dependsOn: ['lib1', 'lib2'])
 }
