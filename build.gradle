@@ -36,6 +36,9 @@ class BuildModel {
 }
 
 class CBuildModel extends BuildModel {
+    int sourceCount = 10
+    int testCount = 5
+
     void addLibrary(Map<String, String> args) {
         addSubproject(new CLibraryModel(name: args.name), args.dependsOn)
     }
@@ -45,6 +48,8 @@ class CBuildModel extends BuildModel {
     }
 
     private void addSubproject(CSourceProjectModel project, List<String> dependsOn) {
+        project.sourceCount = sourceCount
+        project.testCount = testCount
         addSubproject(project)
         for (String dep : dependsOn ?: []) {
             project.dependencies.add(getProject(dep))
@@ -58,8 +63,8 @@ class ProjectModel {
 
 abstract class CSourceProjectModel extends ProjectModel {
     List<CLibraryModel> dependencies = []
-    int sourceCount = 10
-    int testCount = 5
+    int sourceCount
+    int testCount
 
     abstract boolean isLibrary()
 
@@ -423,10 +428,13 @@ task nativeApp(type: GradleNativeBuildTask) {
     appSourceTemplate = file("templates/native/project/main.c.ftl")
     testSourceTemplate = file("templates/native/project/test.c.ftl")
 
-    build = new CBuildModel()
+    build = new CBuildModel(sourceCount: 10, testCount: 5)
     build.rootProject.name = 'TestApp'
-    build.addLibrary(name: 'lib1')
-    build.addLibrary(name: 'lib2', dependsOn: ['lib1'])
-    build.addApp(name: 'app1', dependsOn: ['lib1', 'lib2'])
-    build.addApp(name: 'app2', dependsOn: ['lib1', 'lib2'])
+    (1..120).each { i ->
+        def deps = i > 1 ? (1..i-1).collect { n -> "lib$n" } : []
+        build.addLibrary(name: "lib$i", dependsOn: deps)
+    }
+    def all = (1..120).collect { i -> "lib$i" }
+    build.addApp(name: 'app1', dependsOn: all)
+    build.addApp(name: 'app2', dependsOn: all)
 }
