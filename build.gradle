@@ -112,6 +112,9 @@ class CAppModel extends CSourceProjectModel {
 }
 
 abstract class JavaSourceProjectModel extends ProjectModel {
+    int sourceCount = 4
+    int testCount = 2
+
     String getBasePackage() {
         return "org.test." + name.toLowerCase()
     }
@@ -121,18 +124,11 @@ abstract class JavaSourceProjectModel extends ProjectModel {
     abstract JavaSourceFileModel getEntryPoint()
 
     List<JavaSourceFileModel> getProductionClasses() {
-        return [
-                entryPoint,
-                new JavaSourceFileModel(project: this, name: 'Util1'),
-                new JavaSourceFileModel(project: this, name: 'Util2'),
-                new JavaSourceFileModel(project: this, name: 'Util3')
-        ]
+        return [entryPoint] + (1..sourceCount-1).collect { n -> new JavaSourceFileModel(project: this, name: "Util$n") }
     }
 
-    List<JavaSourceFileModel> getTestClasses() {
-        return [
-            new JavaSourceFileModel(project: this, name: "UnitTest", referencedClass: entryPoint)
-        ]
+    List<JavaSourceFileModel> getTestCount() {
+        return (1..testCount).collect { n -> new JavaSourceFileModel(project: this, name: "UnitTest$n", referencedClass: entryPoint) }
     }
 }
 
@@ -249,7 +245,7 @@ class GradleJvmBuildTask extends GradleBuildTask {
         for (def c : javaProject.productionClasses) {
             generateFile(configuration, [project: javaProject, class: c], "source.java", "${javaProject.name}/src/main/java/${c.sourceFileName}", outputDir)
         }
-        for (def c : javaProject.testClasses) {
+        for (def c : javaProject.testCount) {
             generateFile(configuration, [project: javaProject, class: c], "test.java", "${javaProject.name}/src/test/java/${c.sourceFileName}", outputDir)
         }
     }
