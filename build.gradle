@@ -408,9 +408,10 @@ task javaApp(type: GradleJvmBuildTask) {
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.addSubproject(new JavaAppModel(name: 'app'))
-    build.addSubproject(new JavaLibraryModel(name: 'lib1'))
-    build.addSubproject(new JavaLibraryModel(name: 'lib2'))
+    build.addSubproject(new JavaAppModel(name: 'app', sourceCount: 2500, testCount: 500))
+    (1..49).each { i ->
+        build.addSubproject(new JavaLibraryModel(name: "lib$i", sourceCount: 2500, testCount: 500))
+    }
 }
 
 task nativeApp(type: GradleNativeBuildTask) {
