@@ -294,13 +294,20 @@ class AndroidBuildTask extends GradleJvmBuildTask {
     File activitySourceTemplate
 
     @InputFile
+    File resourcesTemplate
+
+    @InputFile
     File localPropertiesTemplate
+
+    @InputFiles
+    List<File> iconDirs = []
 
     @Override
     void registerTemplates(StringTemplateLoader loader) {
         super.registerTemplates(loader)
         loader.putTemplate("AndroidManifest.xml", androidManifestTemplate.text)
         loader.putTemplate("activity.java", activitySourceTemplate.text)
+        loader.putTemplate("resources.xml", resourcesTemplate.text)
         loader.putTemplate("local.properties", localPropertiesTemplate.text)
     }
 
@@ -314,6 +321,14 @@ class AndroidBuildTask extends GradleJvmBuildTask {
     void generateProjectFiles(Configuration configuration, ProjectModel projectModel) {
         super.generateProjectFiles(configuration, projectModel)
         generateFile(configuration, [project: projectModel], "AndroidManifest.xml", "${projectModel.name}/src/main/AndroidManifest.xml", outputDir)
+        generateFile(configuration, [project: projectModel], "resources.xml", "${projectModel.name}/src/main/res/values/resources.xml", outputDir)
+        iconDirs.each { srcDir ->
+            def destDir = new File(outputDir, "${projectModel.name}/src/main/res/${srcDir.name}")
+            destDir.mkdirs()
+            srcDir.listFiles().each { srcFile ->
+                new File(destDir, srcFile.name).bytes = srcFile.bytes
+            }
+        }
     }
 }
 
@@ -457,8 +472,10 @@ task androidApp(type: AndroidBuildTask) {
     androidManifestTemplate = file("templates/android/project/AndroidManifest.xml.ftl")
     localPropertiesTemplate = file("templates/android/local.properties.ftl")
     activitySourceTemplate = file("templates/android/project/activity.java.ftl")
+    resourcesTemplate = file("templates/android/project/resources.xml.ftl")
     sourceTemplate = file("templates/java/project/library.java.ftl")
     testSourceTemplate = file("templates/java/project/libraryTest.java.ftl")
+    iconDirs << file("templates/android/project/mipmap-hdpi")
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
