@@ -213,6 +213,7 @@ class GradleBuildTask extends TemplateTask {
         registerTemplates(loader)
         generateFile(configuration, [build: build], "settings.gradle", "settings.gradle", outputDir)
         generateFile(configuration, [project: build.rootProject], "root-build.gradle", "build.gradle", outputDir)
+        generateBuildFiles(configuration, build)
         build.subprojects.each { p ->
             generateFile(configuration, [project: p], "project-build.gradle", "${p.name}/build.gradle", outputDir)
             generateProjectFiles(configuration, p)
@@ -220,6 +221,9 @@ class GradleBuildTask extends TemplateTask {
     }
 
     void registerTemplates(StringTemplateLoader loader) {
+    }
+
+    void generateBuildFiles(Configuration configuration, BuildModel buildModel) {
     }
 
     void generateProjectFiles(Configuration configuration, ProjectModel projectModel) {
@@ -240,14 +244,42 @@ class GradleJvmBuildTask extends GradleBuildTask {
     }
 
     @Override
-    void generateProjectFiles(Configuration configuration, ProjectModel p) {
-        JavaSourceProjectModel javaProject = p
+    void generateProjectFiles(Configuration configuration, ProjectModel projectModel) {
+        super.generateProjectFiles(configuration, projectModel)
+        JavaSourceProjectModel javaProject = projectModel
         for (def c : javaProject.productionClasses) {
             generateFile(configuration, [project: javaProject, class: c], "source.java", "${javaProject.name}/src/main/java/${c.sourceFileName}", outputDir)
         }
         for (def c : javaProject.testCount) {
             generateFile(configuration, [project: javaProject, class: c], "test.java", "${javaProject.name}/src/test/java/${c.sourceFileName}", outputDir)
         }
+    }
+}
+
+class AndroidBuildTask extends GradleJvmBuildTask {
+    @InputFile
+    File androidManifestTemplate
+
+    @InputFile
+    File localPropertiesTemplate
+
+    @Override
+    void registerTemplates(StringTemplateLoader loader) {
+        super.registerTemplates(loader)
+        loader.putTemplate("AndroidManifest.xml", androidManifestTemplate.text)
+        loader.putTemplate("local.properties", localPropertiesTemplate.text)
+    }
+
+    @Override
+    void generateBuildFiles(Configuration configuration, BuildModel buildModel) {
+        super.generateBuildFiles(configuration, buildModel)
+        generateFile(configuration, [userHome: System.getProperty("user.home")], "local.properties", "local.properties", outputDir)
+    }
+
+    @Override
+    void generateProjectFiles(Configuration configuration, ProjectModel projectModel) {
+        super.generateProjectFiles(configuration, projectModel)
+        generateFile(configuration, [project: projectModel], "AndroidManifest.xml", "${projectModel.name}/src/main/AndroidManifest.xml", outputDir)
     }
 }
 
@@ -277,8 +309,9 @@ class GradleNativeBuildTask extends GradleBuildTask {
     }
 
     @Override
-    void generateProjectFiles(Configuration configuration, ProjectModel p) {
-        CSourceProjectModel cProject = p
+    void generateProjectFiles(Configuration configuration, ProjectModel projectModel) {
+        super.generateProjectFiles(configuration, projectModel)
+        CSourceProjectModel cProject = projectModel
         cProject.implSourceNames.each { name ->
             def baseName = name.replace(".c", "")
             generateFile(configuration, [project: cProject, name: baseName], "source.c", "${cProject.name}/src/main/c/${name}", outputDir)
@@ -381,12 +414,14 @@ task mavenBuild(type: MavenBuildTask) {
     pomTemplate = file("templates/maven/build/pom.xml.ftl")
 }
 
-task androidApp(type: GradleJvmBuildTask) {
+task androidApp(type: AndroidBuildTask) {
     dependsOn mavenRepo
     outputDir = file("$buildDir/android")
     settingsTemplate = file("templates/common/settings.gradle.ftl")
     rootProjectTemplate = file("templates/android/build.gradle.ftl")
     projectTemplate = file("templates/android/project/build.gradle.ftl")
+    androidManifestTemplate = file("templates/android/project/AndroidManifest.xml.ftl")
+    localPropertiesTemplate = file("templates/android/local.properties.ftl")
     sourceTemplate = file("templates/java/project/library.java.ftl")
     testSourceTemplate = file("templates/java/project/libraryTest.java.ftl")
 
