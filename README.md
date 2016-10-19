@@ -1,1 +1,1 @@
-Some templates that generate Gradle builds, for benchmarking and profiling.
+Some templates that generate Gradle builds for benchmarking and profiling.
