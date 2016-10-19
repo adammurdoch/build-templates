@@ -121,6 +121,10 @@ abstract class JavaSourceProjectModel extends ProjectModel {
 
     abstract boolean isLibrary()
 
+    boolean isApp() {
+        return !library
+    }
+
     abstract JavaSourceFileModel getEntryPoint()
 
     List<JavaSourceFileModel> getProductionClasses() {
