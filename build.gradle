@@ -124,11 +124,11 @@ abstract class JavaSourceProjectModel extends ProjectModel {
     abstract JavaSourceFileModel getEntryPoint()
 
     List<JavaSourceFileModel> getProductionClasses() {
-        return [entryPoint] + (1..sourceCount-1).collect { n -> new JavaSourceFileModel(project: this, name: "Util$n") }
+        return [entryPoint] + (1..sourceCount-1).collect { n -> new JavaSourceFileModel(project: this, name: "Util$n", template: "source.java") }
     }
 
     List<JavaSourceFileModel> getTestCount() {
-        return (1..testCount).collect { n -> new JavaSourceFileModel(project: this, name: "UnitTest$n", referencedClass: entryPoint) }
+        return (1..testCount).collect { n -> new JavaSourceFileModel(project: this, name: "UnitTest$n", template: "test.java", referencedClass: entryPoint) }
     }
 }
 
@@ -137,7 +137,7 @@ class JavaAppModel extends JavaSourceProjectModel {
 
     @Override
     JavaSourceFileModel getEntryPoint() {
-        return new JavaSourceFileModel(project: this, name: "AppMain")
+        return new JavaSourceFileModel(project: this, name: "AppMain", template: "source.java")
     }
 }
 
@@ -146,7 +146,31 @@ class JavaLibraryModel extends JavaSourceProjectModel {
 
     @Override
     JavaSourceFileModel getEntryPoint() {
-        return new JavaSourceFileModel(project: this, name: "Lib")
+        return new JavaSourceFileModel(project: this, name: "Lib", template: "source.java")
+    }
+}
+
+abstract class AndroidModel extends JavaSourceProjectModel {
+    JavaSourceFileModel getActivity() {
+        return getEntryPoint()
+    }
+}
+
+class AndroidAppModel extends AndroidModel {
+    boolean isLibrary() { false }
+
+    @Override
+    JavaSourceFileModel getEntryPoint() {
+        return new JavaSourceFileModel(project: this, name: "AppActivity", template: "activity.java")
+    }
+}
+
+class AndroidLibraryModel extends AndroidModel {
+    boolean isLibrary() { true }
+
+    @Override
+    JavaSourceFileModel getEntryPoint() {
+        return new JavaSourceFileModel(project: this, name: "LibActivity", template: "activity.java")
     }
 }
 
@@ -154,6 +178,12 @@ class JavaSourceFileModel {
     JavaSourceProjectModel project
     String name
     JavaSourceFileModel referencedClass
+    String template
+
+    @Override
+    String toString() {
+        return qualifiedName
+    }
 
     String getPackage() {
         return project.basePackage
@@ -248,10 +278,10 @@ class GradleJvmBuildTask extends GradleBuildTask {
         super.generateProjectFiles(configuration, projectModel)
         JavaSourceProjectModel javaProject = projectModel
         for (def c : javaProject.productionClasses) {
-            generateFile(configuration, [project: javaProject, class: c], "source.java", "${javaProject.name}/src/main/java/${c.sourceFileName}", outputDir)
+            generateFile(configuration, [project: javaProject, class: c], c.template, "${javaProject.name}/src/main/java/${c.sourceFileName}", outputDir)
         }
         for (def c : javaProject.testCount) {
-            generateFile(configuration, [project: javaProject, class: c], "test.java", "${javaProject.name}/src/test/java/${c.sourceFileName}", outputDir)
+            generateFile(configuration, [project: javaProject, class: c], c.template, "${javaProject.name}/src/test/java/${c.sourceFileName}", outputDir)
         }
     }
 }
@@ -261,12 +291,16 @@ class AndroidBuildTask extends GradleJvmBuildTask {
     File androidManifestTemplate
 
     @InputFile
+    File activitySourceTemplate
+
+    @InputFile
     File localPropertiesTemplate
 
     @Override
     void registerTemplates(StringTemplateLoader loader) {
         super.registerTemplates(loader)
         loader.putTemplate("AndroidManifest.xml", androidManifestTemplate.text)
+        loader.putTemplate("activity.java", activitySourceTemplate.text)
         loader.putTemplate("local.properties", localPropertiesTemplate.text)
     }
 
@@ -422,14 +456,15 @@ task androidApp(type: AndroidBuildTask) {
     projectTemplate = file("templates/android/project/build.gradle.ftl")
     androidManifestTemplate = file("templates/android/project/AndroidManifest.xml.ftl")
     localPropertiesTemplate = file("templates/android/local.properties.ftl")
+    activitySourceTemplate = file("templates/android/project/activity.java.ftl")
     sourceTemplate = file("templates/java/project/library.java.ftl")
     testSourceTemplate = file("templates/java/project/libraryTest.java.ftl")
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.addSubproject(new JavaAppModel(name: 'app'))
-    build.addSubproject(new JavaLibraryModel(name: 'lib1'))
-    build.addSubproject(new JavaLibraryModel(name: 'lib2'))
+    build.addSubproject(new AndroidAppModel(name: 'app'))
+    build.addSubproject(new AndroidLibraryModel(name: 'lib1'))
+    build.addSubproject(new AndroidLibraryModel(name: 'lib2'))
 }
 
 task javaApp(type: GradleJvmBuildTask) {
@@ -443,9 +478,9 @@ task javaApp(type: GradleJvmBuildTask) {
 
     build = new BuildModel()
     build.rootProject.name = 'TestApp'
-    build.addSubproject(new JavaAppModel(name: 'app', sourceCount: 2500, testCount: 500))
-    (1..49).each { i ->
-        build.addSubproject(new JavaLibraryModel(name: "lib$i", sourceCount: 2500, testCount: 500))
+    build.addSubproject(new JavaAppModel(name: 'app', sourceCount: 5, testCount: 2))
+    (1..2).each { i ->
+        build.addSubproject(new JavaLibraryModel(name: "lib$i", sourceCount: 5, testCount: 2))
     }
 }
 
