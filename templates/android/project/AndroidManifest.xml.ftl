@@ -4,7 +4,7 @@
 <#if project.app>
             android:label="@string/app_name"
             android:icon="@mipmap/ic_launcher"
-            android:theme="@style/AppTheme"
+            android:theme="@style/app_theme"
 </#if>
     >
 <#if project.app>

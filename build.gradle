@@ -301,6 +301,9 @@ class AndroidBuildTask extends GradleJvmBuildTask {
     File resourcesTemplate
 
     @InputFile
+    File layoutTemplate
+
+    @InputFile
     File localPropertiesTemplate
 
     @InputFiles
@@ -311,6 +314,7 @@ class AndroidBuildTask extends GradleJvmBuildTask {
         super.registerTemplates(loader)
         loader.putTemplate("AndroidManifest.xml", androidManifestTemplate.text)
         loader.putTemplate("activity.java", activitySourceTemplate.text)
+        loader.putTemplate("activity_layout.xml", layoutTemplate.text)
         loader.putTemplate("resources.xml", resourcesTemplate.text)
         loader.putTemplate("local.properties", localPropertiesTemplate.text)
     }
@@ -326,6 +330,7 @@ class AndroidBuildTask extends GradleJvmBuildTask {
         super.generateProjectFiles(configuration, projectModel)
         generateFile(configuration, [project: projectModel], "AndroidManifest.xml", "${projectModel.name}/src/main/AndroidManifest.xml", outputDir)
         generateFile(configuration, [project: projectModel], "resources.xml", "${projectModel.name}/src/main/res/values/resources.xml", outputDir)
+        generateFile(configuration, [project: projectModel], "activity_layout.xml", "${projectModel.name}/src/main/res/layout/activity_layout.xml", outputDir)
         iconDirs.each { srcDir ->
             def destDir = new File(outputDir, "${projectModel.name}/src/main/res/${srcDir.name}")
             destDir.mkdirs()
@@ -477,6 +482,7 @@ task androidApp(type: AndroidBuildTask) {
     localPropertiesTemplate = file("templates/android/local.properties.ftl")
     activitySourceTemplate = file("templates/android/project/activity.java.ftl")
     resourcesTemplate = file("templates/android/project/resources.xml.ftl")
+    layoutTemplate = file("templates/android/project/activity_layout.xml.ftl")
     sourceTemplate = file("templates/java/project/library.java.ftl")
     testSourceTemplate = file("templates/java/project/libraryTest.java.ftl")
     iconDirs << file("templates/android/project/mipmap-hdpi")
